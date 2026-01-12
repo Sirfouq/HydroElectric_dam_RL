@@ -1,8 +1,12 @@
 from TestEnv import HydroElectric_Test
-import argparse
 import matplotlib.pyplot as plt
 from BaselineAgent import BaselineAgent
+from visualizer import MetricsVisualizer
+
+import argparse
 import os
+import numpy as np
+import pandas as pd
 
 def get_excel_file_path():    
     parser = argparse.ArgumentParser()
@@ -19,42 +23,44 @@ def get_excel_file_path():
     return file_path
 
 def validate_agent(env, RL_agent):
-    reward_history = []
-    action_history = []
-    cumulative_reward = []
+    n_steps = len(env.test_data) * 24 - 1
+    history = {
+        "t": np.arange(n_steps, dtype=np.int32),
+        "action": np.empty(n_steps, dtype=np.float32),
+        "reward": np.empty(n_steps, dtype=np.float32),
+        "cum_reward": np.empty(n_steps, dtype=np.float32),
+        "price": np.empty(n_steps, dtype=np.float32),
+        "volume": np.empty(n_steps, dtype=np.float32),
+        "hour": np.empty(n_steps, dtype=np.int8),
+        "day_of_week": np.empty(n_steps, dtype=np.int8),
+    }
 
+    cumulative_reward = 0.0
     observation = env.observation()
-    done = False
-    for i in range(len(env.test_data) * 24 -1): # Loop through full dataset
-    # while not done:
+
+    for i in range(int(len(env.test_data)) * 24 - 1): # Loop through full dataset
+        # Act
         action = RL_agent.act(observation)
-        action_history.append(action)
-        # The observation is the tuple: [volume, price, hour_of_day, day_of_week, day_of_year, month_of_year, year]
         next_observation, reward, terminated, truncated, info = env.step(action)
-        reward_history.append(reward)
-        cumulative_reward.append(sum(reward_history))
+        cumulative_reward += reward
+        # Gather metrics
+        # Current observation [volume, price, hour_of_day, day_of_week, day_of_year, month_of_year, year]
+        volume, price, hour_of_day, day_of_week = observation[:4]
+
+        history['action'][i] = action * env.max_flow
+        history['reward'][i] = reward
+        history['cum_reward'][i] = cumulative_reward
+        history['price'][i] = price
+        history['volume'][i] = volume
+        history['hour'][i] = hour_of_day
+        history['day_of_week'][i] = day_of_week
 
         done = terminated or truncated
         observation = next_observation
-        
-        # if i % 1000 == 0:
-        #     print(f'Step {i}, Cumulative reward: {cumulative_reward[-1]}')
 
-    print('Cumulative reward: ', cumulative_reward[-1])
-    return (action_history, reward_history, cumulative_reward)
-
-def plot_cum_reward(metric_data):
-        # Plot the cumulative reward over time
-        action_history, reward_history, cumulative_reward = metric_data
-
-        # Plot the cumulative reward over time
-        plt.figure(figsize=(10, 6))
-        plt.plot(cumulative_reward)
-        plt.ylabel('Cumulative Reward')
-        plt.xlabel('Time (Hours)')
-        plt.grid(True)
-
-        plt.show()
+    print('Cumulative reward: ', cumulative_reward)
+     
+    return history
 
 def main():
     file_path = get_excel_file_path()
@@ -64,19 +70,15 @@ def main():
     RL_agent = BaselineAgent(max_hours_history=24)
 
     # action_history, reward_history, cumulative_reward
-    metric_data = validate_agent(env, RL_agent)
-    plot_cum_reward(metric_data)
+    history = validate_agent(env, RL_agent)
+    history_df = pd.DataFrame(history)
 
-
-
-
-
-
-
-    # if (i+1)%1000 == 0:
-    #     print(f'Step: {i+1}, Action: {action}, Reward: {reward}, Volume: {env.volume}, Hour: {env.hour}, Day: {env.day}, Price: {env.price_values[env.day-1][env.hour-1]}')
-
-    
+    visualizer = MetricsVisualizer(history_df)
+    visualizer.plot_cumulative_reward()
+    # visualizer.plot_volume(start_day=60, n_days_detail=14)
+    # visualizer.plot_action_history(start_day=60, n_days_detail=7)
+    # plot_action_history(metric_data[0])
+    # plot_reward_history(metric_data[1])
 
 
 
