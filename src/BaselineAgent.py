@@ -2,13 +2,15 @@ import numpy as np
 import pandas as pd
 from collections import deque
 from scipy.stats import norm
-
+import os
 from TestEnv import HydroElectric_Test
+import matplotlib.pyplot as plt
+
 
 class BaselineAgent:    
     def __init__(self, 
                  safe_volume_ratio_low = 0.15, 
-                 safe_volume_ratio_high = 1, 
+                 safe_volume_ratio_high = 0.9, 
                  max_hours_history=24):
 
         self.max_hours_history = max_hours_history
@@ -83,4 +85,64 @@ class BaselineAgent:
         
         return action
 
+
+def main():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.normpath(os.path.join(current_dir, '..', 'data\\train.xlsx'))
     
+    max_final_reward = -np.inf
+    best_period = 0
+    hours_history = [6, 12, 24, 48, 7*24, 4*7*24]
+    
+    history_df_cum_rewards = []
+
+    for h in hours_history:
+        print(f"Evaluating period of {h} hours")
+        env = HydroElectric_Test(file_path)
+        RL_agent = BaselineAgent(max_hours_history=h)
+
+        current_history = []
+        cumulative_reward = 0.0
+        observation = env.observation()
+        for i in range(int(len(env.test_data)) * 24 - 1): # Loop through full dataset
+        # Act
+            action = RL_agent.act(observation)
+            next_observation, reward, terminated, truncated, info = env.step(action)
+            cumulative_reward += reward
+            current_history.append(cumulative_reward)
+            # Gather metrics
+
+
+            observation = next_observation
+
+        if cumulative_reward >= max_final_reward:
+            max_final_reward = cumulative_reward
+            best_period = h
+        history_df_cum_rewards.append(current_history)
+
+    # --- Visualization: Performance Comparison ---
+    plt.figure(figsize=(12, 6))
+    
+    # Use a color map to distinguish short (cool) vs long (warm) variations
+    colors = plt.cm.viridis(np.linspace(0, 1, len(hours_history)))
+
+    for i, h in enumerate(hours_history):
+        # We plot the cumulative reward history for each 'h'
+        plt.plot(history_df_cum_rewards[i], label=f'Window: {h} Hours', color=colors[i], linewidth=1)
+
+    plt.title(f'Sensitivity Analysis: Impact of Lookback Period on Profit\nBest Period: {best_period}h (Reward: €{max_final_reward:,.0f})')
+    plt.xlabel('Simulation Steps (Hours)')
+    plt.ylabel('Cumulative Reward (€)')
+    plt.legend(title="Rolling Window Size")
+    plt.grid(True, alpha=0.3)
+    
+    # Add a zero line for reference
+    plt.axhline(0, color='black', linewidth=1, linestyle='--')
+    
+    plt.tight_layout()
+    plt.show()
+
+    
+if __name__ == "__main__":
+    main()
+
