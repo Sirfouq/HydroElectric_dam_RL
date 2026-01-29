@@ -3,7 +3,7 @@
 Steps
 
 1. Set parameters, features, and config in tabular_Qagent
-2. Train tabular agent running tabular_Qagent.pyplot
+2. Train tabular agent running tabular_Qagent.py
 3. Log results are stored in folder ../results/..
     Containing
     - config.json - config used in training
