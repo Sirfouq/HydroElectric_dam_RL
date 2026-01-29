@@ -2,6 +2,7 @@ from TestEnv import HydroElectric_Test
 import matplotlib.pyplot as plt
 from BaselineAgent import BaselineAgent
 from visualizer import MetricsVisualizer
+from validate_tabular_agent import TabularQAgentValidator
 
 import argparse
 import os
@@ -40,9 +41,12 @@ def validate_agent(env, RL_agent):
 
     for i in range(int(len(env.test_data)) * 24 - 1): # Loop through full dataset
         # Act
+        # print('Step:', i, 'Volume:', env.volume, 'Price:', env.price_values[env.day-1][env.hour-1])
         action = RL_agent.act(observation)
+        
         next_observation, reward, terminated, truncated, info = env.step(action)
         cumulative_reward += reward
+        print(f"Step {i}: Action {action:.2f}, Reward {reward:.2f}, Cumulative Reward {cumulative_reward:.2f}")
         # Gather metrics
         # Current observation [volume, price, hour_of_day, day_of_week, day_of_year, month_of_year, year]
         volume, price, hour_of_day, day_of_week = observation[:4]
@@ -67,8 +71,9 @@ def main():
 
     # Init environment and agent
     env = HydroElectric_Test(file_path)
-    RL_agent = BaselineAgent(max_hours_history=24)
-
+    # RL_agent = BaselineAgent(max_hours_history=24)
+    run_folder = 'results/20260129_001924_Ep5_Gamma0.99_Zscore'
+    RL_agent = TabularQAgentValidator(run_folder)  # Update this path
     # action_history, reward_history, cumulative_reward
     history = validate_agent(env, RL_agent)
     history_df = pd.DataFrame(history)

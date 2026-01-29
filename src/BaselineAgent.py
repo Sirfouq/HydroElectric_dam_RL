@@ -88,7 +88,9 @@ class BaselineAgent:
 
 def main():
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.normpath(os.path.join(current_dir, '..', 'data\\train.xlsx'))
+    # file_path = os.path.normpath(os.path.join(current_dir, '..', 'data\\train.xlsx'))
+    file_path = os.path.normpath(os.path.join(current_dir, '..', 'data\\validate.xlsx'))
+
     
     max_final_reward = -np.inf
     best_period = 0
