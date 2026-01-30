@@ -1,7 +1,7 @@
 from TestEnv import HydroElectric_Test
 import matplotlib.pyplot as plt
 from BaselineAgent import BaselineAgent
-from visualizer import MetricsVisualizer
+from visualizer import *
 from validate_tabular_agent import TabularQAgentValidator
 
 import argparse
@@ -69,10 +69,20 @@ def validate_agent(env, RL_agent):
 def main():
     file_path = get_excel_file_path()
 
-    # Init environment and agent
+    # Get the absolute path to the 'src' directory where main.py lives
+    src_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Define the folder name exactly as it appears on your disk
+    folder_name = "20260130_002000_Ep1000_Gamma0.99_volumeBins8_priceBins8_days1095"
+
+    # Combine: src/final_results/folder_name
+    run_folder = os.path.join(src_path, "final_results", folder_name)
+
+    print(f"Loading from: {run_folder}") # Debug print to verify the path
+    RL_agent = TabularQAgentValidator(run_folder)
+
+
     env = HydroElectric_Test(file_path)
-    # RL_agent = BaselineAgent(max_hours_history=24)
-    run_folder = 'results/20260129_001924_Ep5_Gamma0.99_Zscore'
     RL_agent = TabularQAgentValidator(run_folder)  # Update this path
     # action_history, reward_history, cumulative_reward
     history = validate_agent(env, RL_agent)
@@ -80,10 +90,12 @@ def main():
 
     visualizer = MetricsVisualizer(history_df)
     visualizer.plot_cumulative_reward()
+    # plot_policy_heatmap(RL_agent)
     # visualizer.plot_volume(start_day=60, n_days_detail=14)
     # visualizer.plot_action_history(start_day=60, n_days_detail=7)
     # plot_action_history(metric_data[0])
     # plot_reward_history(metric_data[1])
+    # plot_rollout_analysis(history_df)
 
 
 
